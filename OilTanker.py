@@ -41,6 +41,9 @@ class OilTanker:
 		
 		return False
 		
+	def __str__(self):
+		return "Oil Tanker n°" + str(self.id) + " arrived at " + str(self.arrivalTime)
+		
 		
 	def addTime(self, t, interval = True):
 		"""

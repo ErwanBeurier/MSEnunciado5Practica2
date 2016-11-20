@@ -1,5 +1,6 @@
 # -*- coding:utf8 -*-
 
+import OilTanker
 
 class ListEvents:
 	"""
@@ -26,12 +27,15 @@ class ListEvents:
 						"ExitOilTanker": [],
 						"TugAvailable": []
 						}
-		self.tankers = {"ArrivalOilTankerEntrance": [],
+		self.tankers = {"ArrivalOilTankerEntrance": [], # Ill-named. Should be understood as "Oil Tankers Waiting in the entrance"
 						"ArrivalOilTankerWharf": [],
 						"UnloadingDone": [],
 						"ExitOilTanker": [],
 						}
-	
+		self.defaultOilTanker = OilTanker.OilTanker(0, -1)
+		# self.nextEvent = ""
+		# self.nextTime = 0.0
+		# self.nextOilTanker = None 
 	
 	def addEvent(self, event, time, oilTanker = None):
 		"""
@@ -49,8 +53,8 @@ class ListEvents:
 		"""
 		self.events[event].append(time)
 		
-		if event in tankers.keys():
-			if oilTanker not None:
+		if event in self.tankers.keys():
+			if oilTanker is not None:
 				oilTanker.addTime(time, False)
 				self.tankers[event].append(oilTanker)
 				ListEvents.doubleMergeSort(self.events[event], self.tankers[event])
@@ -118,14 +122,14 @@ class ListEvents:
 		minTime = 0.0
 		minOilTanker = None
 		
-		for key, value in self.events:
+		for key, value in self.events.iteritems():
 			if len(value) > 0 and value[0] < minTime:
 				minEvent = key
 				minTime = value[0]
 				if key in self.tankers.keys():
 					minOilTanker = self.tankers[key][0]
-		
-		return minEvent, minTime
+		# self.nextEvent, self.nextTime, self.nextOilTanker = minEvent, minTime, minOilTanker
+		return minEvent, minTime, minOilTanker
 	
 	
 	def removeLastEvent(self, event):

@@ -34,15 +34,16 @@ class Port:
 			maxTugs				The maximum number of tugs in the port.
 			timeSimulation		The duration of the simulation.
 		"""
+		self.debugDebug("Initialization starting.")
 		self.maxWharves = maxWharves
 		self.maxTugs = maxTugs
-		self.oilTankersEntrance = [] # No limit on size.
+		self.oilTankersEntrance = [] # No limit on size. DEPRECATED ????
 		self.oilTankersWharves = [] # Needs to be of size <= maxWharves
 		self.oilTankersWharvesDone = [] # The indices in oilTankerWharves that have finished unloading.
 		self.freeTugs = maxTugs # size <= maxTugs
 		self.time = 0.0
 		self.maxTime = timeSimulation
-		self.listEvents = ListEvents()
+		self.listEvents = ListEvents.ListEvents()
 		self.muEmpty = muEmpty
 		self.sigEmpty = sigEmpty
 		self.muFull = muFull
@@ -50,7 +51,9 @@ class Port:
 		self.tankerCountDone = 0
 		self.tankerCountInside = 0
 		self.tankerCountWaiting = 0
+		self.tankerCountTotalGenerated = 0 # Increments 
 		self.cumulTimeTankersDone = 0.0
+		self.debugDebug("End of initialization.")
 	
 	def simulate(self):
 		"""
@@ -63,16 +66,42 @@ class Port:
 					<lkdjfml<
 				etc.
 		"""
+		self.debugDebug("Simulation starting.")
+		self.generateOilTanker()
 		
+		event = ""
+		oilTanker = None 
+		
+		while self.time < self.maxTime:
+			event, self.time, oilTanker = self.listEvents.getNextEvent()
+			self.debugDebug("Step : " + event + str(self.time) + str(oilTanker))
+			
+			if event == "ArrivalOilTankerEntrance":
+				self.routineArrivalOilTankerEntrance(oilTanker)
+			elif event == "ArrivalTugEntrance":
+				self.routineArrivalTugEntrance()
+			elif event == "ArrivalOilTankerWharf":
+				self.routineArrivalOilTankerWharf(oilTanker)
+			elif event == "UnloadingDone":
+				self.routineUnloadingDone(oilTanker)
+			elif event == "ArrivalTugWharf":
+				self.routineArrivalTugWharf()
+			elif event == "ExitOilTanker":
+				self.routineExitOilTanker(oilTanker)
+			elif event == "TugAvailable":
+				self.routineTugAvailable()
+			
+			self.listEvents.removeLastEvent(event)
 		
 	def generateOilTanker(self):
 		"""
 		Used to generate an OilTanker. Simulates an exponential variate of 
 		parameter Port.lambdat, adds the OilTanker to the list of events.
 		"""
+		self.tankerCountTotalGenerated += 1
 		t = random.expovariate(Port.lambdat(self.time))
-		self.oilTankersEntrance.append(OilTanker(t))
-		self.listEvents.addEvent("ArrivalOilTankerEntrance", self.time + t)
+		#self.oilTankersEntrance.append(OilTanker(t, self.tankerCountTotalGenerated))
+		self.listEvents.addEvent("ArrivalOilTankerEntrance", self.time + t, OilTanker.OilTanker(self.time + t, self.tankerCountTotalGenerated))
 	
 	
 	@staticmethod
@@ -95,16 +124,27 @@ class Port:
 		return lt
 	
 	
-	def routineArrivalOilTankerEntrance(self):
+	def routineArrivalOilTankerEntrance(self, oilTanker):
 		self.tankerCountWaiting += 1
-
-	
+		self.generateOilTanker()
+		self.oilTankersEntrance.append(oilTanker)
+		
+		if self.freeTugs > 0:
+			self.freeTugs -= 1
+			t = random.normalvariate(self.muEmpty, self.sigEmpty)
+			self.listEvents.addEvent("ArrivalTugEntrance", self.time + t)
+			
 	
 	def routineArrivalTugEntrance(self):
+		t = random.normalvariate(self.muFull, self.sigFull)
+		ot = self.oilTankersEntrance[0]
+		self.oilTankersEntrance.remove(ot)
+		self.listEvents.addEvent("ArrivalOilTankerWharf", self.time + t, ot)
+		self.tankerCountWaiting -= 1
+		self.tankerCountInside += 1
+
 	
-	
-	
-	def routineArrivalOilTankerWharf(self):
+	def routineArrivalOilTankerWharf(self, oilTanker):
 		"""
 		Wait ??? 
 		There can be a blocked situation here!
@@ -113,22 +153,32 @@ class Port:
 			+ the tugs are carrying an oil tanker to the wharves
 		
 		"""
-		self.routineTugAvailable() # After the tug has left the oil tanker at the wharf!
-		
+		if len(self.oilTankersWharves) + len(self.oilTankersWharvesDone) < 20: 
+			# It means that a wharf is free to deal with the oilTanker.
+			self.listEvents.addEvent("TugAvailable", self.time)
+			t = tStudent.rvs(3)
+			self.listEvents.addEvent("UnloadingDone", self.time + t, oilTanker)
+			self.oilTankersWharves.append(oilTanker)
+		else:
+			print "Risk of blocked situation."
+			raw_input()
 	
 	
 	def routineUnloadingDone(self, oilTanker):
 		self.oilTankersWharves.remove(oilTanker)
 		
 		if self.freeTugs > 0:
+			self.freeTugs -= 1
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugWharf", self.time + t)
 		else:
 			self.oilTankersWharvesDone.append(oilTanker)
 			
 	def routineArrivalTugWharf(self):
-		t = random.normvariate(self.muFull, self.sigFull)
-		self.listEvents.addEvent("ExitOilTanker", self.time + t, self.oilTankersWharvesDone[0])
+		t = random.normalvariate(self.muFull, self.sigFull)
+		ot = self.oilTankersWharvesDone[0]
+		self.listEvents.addEvent("ExitOilTanker", self.time + t, ot)
+		
 	
 	
 	def routineExitOilTanker(self, oilTanker):
@@ -150,7 +200,10 @@ class Port:
 			self.freeTugs += 1
 		
 		
-		
+	def debugDebug(self, s):
+		if ISDEBUG:
+			print s
+			raw_input()
 		
 # self.events = {"ArrivalOilTankerEntrance": [],
 				# "ArrivalTugEntrance": [],
