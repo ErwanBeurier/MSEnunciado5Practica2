@@ -32,7 +32,7 @@ class ListEvents:
 						"UnloadingDone": [],
 						"ExitOilTanker": [],
 						}
-		self.defaultOilTanker = OilTanker.OilTanker(0, -1)
+		# self.defaultOilTanker = OilTanker.OilTanker(0, -1)
 		# self.nextEvent = ""
 		# self.nextTime = 0.0
 		# self.nextOilTanker = None 
@@ -119,7 +119,7 @@ class ListEvents:
 		
 		"""
 		minEvent = ""
-		minTime = 0.0
+		minTime = 1000000.0
 		minOilTanker = None
 		
 		for key, value in self.events.iteritems():
@@ -143,3 +143,39 @@ class ListEvents:
 		if event in self.tankers.keys():
 			self.tankers[event] = self.tankers[event][1:]
 
+
+	def __str__(self):
+		s = "self.events: \r\n" + str(self.events) + "\r\nself.tankers: \r\n" + str(self.tankers)
+		return s
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		

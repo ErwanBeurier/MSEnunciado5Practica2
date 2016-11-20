@@ -67,14 +67,13 @@ class Port:
 				etc.
 		"""
 		self.debugDebug("Simulation starting.")
-		self.generateOilTanker()
-		
+		self.generateOilTanker()		
 		event = ""
 		oilTanker = None 
 		
 		while self.time < self.maxTime:
 			event, self.time, oilTanker = self.listEvents.getNextEvent()
-			self.debugDebug("Step : " + event + str(self.time) + str(oilTanker))
+			self.debugDebug("Step : " + event + " after time : "+ str(self.time) + "Oil Tanker : " + str(oilTanker))
 			
 			if event == "ArrivalOilTankerEntrance":
 				self.routineArrivalOilTankerEntrance(oilTanker)
@@ -90,8 +89,10 @@ class Port:
 				self.routineExitOilTanker(oilTanker)
 			elif event == "TugAvailable":
 				self.routineTugAvailable()
-			
+				
+			# self.debugDebug("Event to remove : " + event)
 			self.listEvents.removeLastEvent(event)
+			# print self.listEvents
 		
 	def generateOilTanker(self):
 		"""
@@ -112,15 +113,15 @@ class Port:
 		t = t % 24.0
 		lt = 0
 		if 0.0 <= t and t < 5.0:
-			lt = 2.0/5.0*t - 5.0
+			lt = 2.0/5.0*t + 5.0
 		elif 5.0 <= t and t < 9.0:
-			lt = -1.0/4.0*t - 33.0/4
+			lt = -1.0/4.0*t + 33.0/4
 		elif 9.0 <= t and t < 15.0:
-			lt = 1.0/2.0*t - 3.0/2.0
+			lt = 1.0/2.0*t + 3.0/2.0
 		elif 15.0 <= t and t < 17.0:
-			lt = -3.0/2.0*t - 63.0/2.0
+			lt = -3.0/2.0*t + 63.0/2.0
 		else:
-			lt = -1.0/7.0*t - 59.0/7.0
+			lt = -1.0/7.0*t + 59.0/7.0
 		return lt
 	
 	
