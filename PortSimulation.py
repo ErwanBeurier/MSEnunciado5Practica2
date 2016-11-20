@@ -1,204 +1,15 @@
 # -*- coding:utf8 -*-
 
 import random
-from enum import Enum
 from scipy.stats import t as tStudent
 from scipy.stats import norm
+import ListEvents
+import OilTanker
 
 
-class ListEvents:
-	"""
-	Class containing the information about the different events that can occur 
-	in the simulation.
-	The events are stored in a dictionary. The key is the name of the event, 
-	and the associated value is a list of float, supposed to be the times (in 
-	minutes).
-	The Port is supposed to contain one instance of this class.
-	
-	Attributes:
-		events			Dictionary (events, list of times). The events are 
-						supposed to occur at the times given in the list.
-	"""
-	def __init__(self):
-		"""
-		Default initializer. Empty list for every event.
-		"""
-		self.events = {"ArrivalOilTankerEntrance": [],
-						"ArrivalTugEntrance": [],
-						"ArrivalOilTankerWharf": [],
-						"UnloadingDone": [],
-						"ArrivalTugWharf": [],
-						"ExitOilTanker": [],
-						"TugAvailable": []
-						}
-		self.tankers = []
-	
-	
-	def addEvent(self, event, time, oilTanker = None):
-		"""
-		Adds the event "event" at given "time". Sorts the list of times of the 
-		given event, so the first element of the list is always the soonest to 
-		come.
-		
-		Arguments:
-			event		The code of the event. Cf. __init__() to see what 
-						events make sense in this simulation.
-			time 		Time in minutes. The timestamp at which the event is 
-						supposed to occur.
-			oilTanker	In the special case in which the event is an "UnloadingDone", 
-						we need to know which tanker is concerned.
-		"""
-		self.events[event].append(time)
-		
-		if event == "UnloadingDone":
-			if oilTanker not None:
-				self.tankers.append(oilTanker)
-				ListEvents.doubleMergeSort(self.events[event], self.tankers)
-			else:
-				raise Exception("UnloadingDone without specified tanker. Abort.")
-				return 
-		else:
-			self.events[event].sort()
- 
- 
-	@staticmethod
-	def doubleMergeSort(liUnloaded, tankers):
-		"""
-		Applies a merge sort on both lists. However, the values of "liUnloaded" 
-		are the only one used to sort both lists. It means that "tankers" is 
-		supposed to be paired.
-		
-		Arguments:
-			liUnloaded		A list to sort. 
-			tankers			Second list to sort. 
-		"""
-		if len(liUnloaded) > 1:
-			mid = len(liUnloaded)//2
-			leftList = liUnloaded[:mid]
-			rightList = liUnloaded[mid:]
-			leftTankers = tankers[:mid]
-			rightTankers = tankers[mid:]
 
-			ListEvents.doubleMergeSort(leftList, leftTankers)
-			ListEvents.doubleMergeSort(rightList, rightTankers)
+ISDEBUG = True 
 
-			i = 0
-			j = 0 
-			k = 0
-			while i < len(leftList) and j < len(rightList):
-				if leftList[i] < rightList[j]:
-					liUnloaded[k] = leftList[i]
-					tankers[k] = leftTankers[i]
-					i += 1
-				else:
-					liUnloaded[k]=rightList[j]
-					tankers[k] = rightTankers[j]
-					j += 1
-				k += 1
-
-			while i < len(leftList):
-				liUnloaded[k] = leftList[i]
-				tankers[k] = leftTankers[i]
-				i += 1
-				k += 1
-
-			while j < len(rightList):
-				liUnloaded[k] = rightList[j]
-				tankers[k] = rightTankers[j]
-				j += 1
-				k += 1
-	
-	def getNextEvent(self):
-		"""
-		Searches the attribute "events" to find the next event to come. Returns 
-		the event and the time at which it's supposed to occur.
-		
-		"""
-		minEvent = ""
-		minTime = 0.0
-		
-		for key, value in self.events:
-			if len(value) > 0 and value[0] < minTime:
-				minEvent = key
-				minTime = value[0]
-				
-		return minEvent, minTime
-	
-	
-	def removeLastEvent(self, event):
-		"""
-		Removes the first time of given "event".
-		
-		Arguments:
-			event		The event the first time of which should be removed.
-		"""
-		self.events[event] = self.events[event][1:]
-
-
-class OilTanker:
-	"""
-	Convenient class. 
-	Stores the time spent in the port.
-	
-	Attributes:
-		arrivalTime		Arrival time of the boat at the port.
-		listTimes		List of times spent in the port. It's not a list of 
-						timestamps, but a list of times spent (it's not a list 
-						of absolute times).
-						NB: I've put a list because their are lots of things to 
-						check to answer the question. We could register every 
-						action of the boat and check this list to decompose its 
-						travel.
-		totalTime		Total time spent by the OilTanker in the Port.
-	"""
-	
-	def __init__(self, t, id):
-		"""
-		Default constructor. 
-		
-		Arguments:
-			t 			The arrival time at the entrance of the port.
-		
-		"""
-		self.totalTime = 0.0
-		self.listTimes = [0.0]
-		self.arrivalTime = t
-		self.lastTimeTookCare = t # Last time we took care of this ship.
-		self.id = id
-		
-	def __hash__(self):
-		return self.id
-		
-	def __eq__(self, other):
-		if isinstance(other, OilTanker):
-			return (other.id == self.id)
-		
-		return False
-		
-		
-	def addTime(self, t, interval = True):
-		"""
-		Registers a new time in the instance. 
-		
-		Arguments:
-			t 			Interval of time between the last event and the recorded 
-						event (if "interval" is True) OR timestamp of last event 
-						occuring to this boat.
-			interval 	Defines the sense of the argument "t" : interval of time 
-						or timestamp.
-		"""
-		
-		if interval:
-			self.listTimes.append(t)
-			self.totalTime += t
-			self.lastTimeTookCare += t
-		else:
-			t1 = t - self.lastTimeTookCare
-			self.listTimes.append(t1)
-			self.totalTime += t1
-			self.lastTimeTookCare += t1
-	
-	
 class Port:
 	"""
 	The class managing the port.
@@ -236,9 +47,12 @@ class Port:
 		self.sigEmpty = sigEmpty
 		self.muFull = muFull
 		self.sigFull = sigFull
+		self.tankerCountDone = 0
+		self.tankerCountInside = 0
+		self.tankerCountWaiting = 0
+		self.cumulTimeTankersDone = 0.0
 	
 	def simulate(self):
-		
 		"""
 		So it will be a while loop 
 			while 
@@ -259,7 +73,6 @@ class Port:
 		t = random.expovariate(Port.lambdat(self.time))
 		self.oilTankersEntrance.append(OilTanker(t))
 		self.listEvents.addEvent("ArrivalOilTankerEntrance", self.time + t)
-		
 	
 	
 	@staticmethod
@@ -283,7 +96,8 @@ class Port:
 	
 	
 	def routineArrivalOilTankerEntrance(self):
-		
+		self.tankerCountWaiting += 1
+
 	
 	
 	def routineArrivalTugEntrance(self):
@@ -303,21 +117,27 @@ class Port:
 		
 	
 	
-	def routineUnloadingDone(self):
+	def routineUnloadingDone(self, oilTanker):
+		self.oilTankersWharves.remove(oilTanker)
+		
 		if self.freeTugs > 0:
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugWharf", self.time + t)
 		else:
-			self.oilTankersWharvesDone()
-	
-	
+			self.oilTankersWharvesDone.append(oilTanker)
+			
 	def routineArrivalTugWharf(self):
+		t = random.normvariate(self.muFull, self.sigFull)
+		self.listEvents.addEvent("ExitOilTanker", self.time + t, self.oilTankersWharvesDone[0])
+	
+	
+	def routineExitOilTanker(self, oilTanker):
+		# oilTanker.addTime(self.time, False) #Already done in addEvent?
+		self.cumulTimeTankersDone = oilTanker.getTotalTime()
+		self.tankerCountInside -= 1
+		self.tankerCountDone += 1
+		self.listEvents.addEvent("TugAvailable", self.time)
 		
-	
-	
-	def routineExitOilTanker(self):
-		
-	
 	
 	def routineTugAvailable(self):
 		if len(self.oilTankersEntrance) > 0:
@@ -326,9 +146,9 @@ class Port:
 		elif len(self.oilTankersWharvesDone) > 0:
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugWharf", self.time + t)
-		elif self.freeTugs < self.maxTugs:
+		elif self.freeTugs < self.maxTugs: # Should not occur, but well...
 			self.freeTugs += 1
-
+		
 		
 		
 		
