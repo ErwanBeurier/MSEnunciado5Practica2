@@ -1,13 +1,43 @@
 # -*- coding:utf8 -*-
 
 
+"""============================================================================
+								ENUNCIADO 5
+								PRACTICA 2
+								
+	BEURIER Erwan
+	CANAVATE VEGA Fernando
+	DE LA ROSA Augustin
+	NAPOLI Luca 
+
+	This file contains the implementation of the class OilTanker.
+	
+	Useful methods:
+		getTotalTime()
+		addTime()
+	(The rest is supposed to be private, even if Python doesn't know about 
+	encapsulation)
+	
+	This file is not supposed to be launched via console.
+	
+	
+	Vocabulary (because the code is in English but the wording is in Spanish):
+		oil tanker	= petrolero
+	
+	
+TODO:
+
+============================================================================"""
+
 class OilTanker:
 	"""
 	Convenient class. 
 	Stores the time spent in the port.
 	
 	Attributes:
+		id				The id of the oil tanker. To identify the oil tanker.
 		arrivalTime		Arrival time of the boat at the port.
+		lastTimeTookCare	Last time we took care of this ship.
 		listTimes		List of times spent in the port. It's not a list of 
 						timestamps, but a list of times spent (it's not a list 
 						of absolute times).
@@ -23,25 +53,35 @@ class OilTanker:
 		Default constructor. 
 		
 		Arguments:
+			id			The id of the oil tanker.
 			t 			The arrival time at the entrance of the port.
-		
 		"""
+		self.id = id
+		self.arrivalTime = t
+		self.lastTimeTookCare = t
 		self.totalTime = 0.0
 		self.listTimes = [0.0]
-		self.arrivalTime = t
-		self.lastTimeTookCare = t # Last time we took care of this ship.
-		self.id = id
 		
 	def __hash__(self):
+		"""
+		To make the oil tanker hashable. Simply returns its id. 
+		"""
 		return self.id
 		
 	def __eq__(self, other):
+		"""
+		A comparison function. Mandatory to be able to remove an oil tanker from 
+		a list in ListEvents or in Port classes.
+		"""
 		if isinstance(other, OilTanker):
 			return (other.id == self.id)
 		
 		return False
 		
-	def __str__(self):
+	def __str__(self):	
+		"""
+		Method to make the instance printable.
+		"""
 		return "Oil Tanker num " + str(self.id) + " arrived at " + str(self.arrivalTime)
 		
 		
@@ -68,6 +108,9 @@ class OilTanker:
 			self.lastTimeTookCare += t1
 	
 	def getTotalTime(self):
+		"""
+		Accessor method. Not needed in Python but still a good practice.
+		"""
 		return self.totalTime
 		
 		

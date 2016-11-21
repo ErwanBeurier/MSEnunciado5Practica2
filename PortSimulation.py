@@ -1,11 +1,42 @@
 # -*- coding:utf8 -*-
 
+
+"""============================================================================
+								ENUNCIADO 5
+								PRACTICA 2
+								
+	BEURIER Erwan
+	CANAVATE VEGA Fernando
+	DE LA ROSA Augustin
+	NAPOLI Luca 
+
+	This file contains the implementation of the class Port.
+	Useful methods:
+		simulate()
+	(The rest is supposed to be private, even if Python doesn't know about 
+	encapsulation)
+	
+	This file is not supposed to be launched via console.
+	
+	
+	Vocabulary (because the code is in English but the wording is in Spanish):
+		tug 		= remolcador
+		oil tanker	= petrolero
+		wharf 		= muelle
+	
+	
+TODO:
+	routineArrivalOilTankerWharf : risk of blocked situation.
+	add the attributes that enable to answer the questions LOL
+============================================================================"""
+
+
+
 import random
 from scipy.stats import t as tStudent
 from scipy.stats import norm
 import ListEvents
 import OilTanker
-
 
 
 ISDEBUG = True 
@@ -15,16 +46,36 @@ class Port:
 	The class managing the port.
 	
 	Attributes:
-		maxWharves
-		maxTugs
-		oilTankersEntrance		"Petroleros en la entrada". Queue in the entrance. No limit on size.
-		oilTankersWharves		"Petroleros en un muelle". List of oil tankers at the wharves. Should be limited.
-		freeTugs
-		time					Timestamp.
-		maxTime
+		maxWharves				Total number of wharves in the port.
+		maxTugs					Total number of tugs in the port.
+		oilTankersEntrance		Queue at the entrance of the port.
+		oilTankersWharves	 	List of OilTankers that are currently unloading.
+		oilTankersWharvesDone	List of OilTankers that have finished unloading.
+		freeTugs				Number of free tugs in the port.
+		time					The clock in the port (in minutes). Updates at 
+								each iteration of the method Port.simulate().
+		maxTime					The time that the simulation is supposed to last 
+								(in minutes).
+		listEvents				A register that stores events, their time of 
+								occurrence, and the concerned oil tanker, if any.
+		muEmpty					The mean of the time took by the tugs to reach 
+								their destination when empty.
+		sigEmpty 				The standard deviation of the time took by the 
+								tugs to reach their destination when empty.
+		muFull 					The mean of the time took by the tugs to reach 
+								their destination when carrying an oil tanker.
+		sigFull 				The standard deviation of the time took by the 
+								tugs to reach their destination when carrying 
+								an oil tanker.
+		tankerCountDone			Counts the number of tankers done.
+		tankerCountInside		Counts the number of tankers inside.
+		tankerCountWaiting		Counts the number of tankers waiting.
+		tankerCountTotalGenerated	Counts the number of generated tankers. 
+								Mandatory to identify tankers (a tanker has an 
+								id).
+		cumulTimeTankersDone	Counts the time took by tankers inside the port.
+
 	"""
-	
-	
 	def __init__(self, maxWharves, maxTugs, timeSimulation, muEmpty = 2, sigEmpty = 1, muFull = 10, sigFull = 3):
 		"""
 		Constructor. 
@@ -33,11 +84,20 @@ class Port:
 			maxWharves			The maximum number of wharves in the port.
 			maxTugs				The maximum number of tugs in the port.
 			timeSimulation		The duration of the simulation.
+			muEmpty				The mean of the time took by the tugs to reach 
+								their destination when empty.
+			sigEmpty			The standard deviation of the time took by the 
+								tugs to reach their destination when empty.
+			muFull				The mean of the time took by the tugs to reach 
+								their destination when carrying an oil tanker.
+			sigFull				The standard deviation of the time took by the 
+								tugs to reach their destination when carrying 
+								an oil tanker.
 		"""
 		self.debugDebug("Initialization starting.")
 		self.maxWharves = maxWharves
 		self.maxTugs = maxTugs
-		self.oilTankersEntrance = [] # No limit on size. DEPRECATED ????
+		self.oilTankersEntrance = [] # No limit on size.
 		self.oilTankersWharves = [] # Needs to be of size <= maxWharves
 		self.oilTankersWharvesDone = [] # The indices in oilTankerWharves that have finished unloading.
 		self.freeTugs = maxTugs # size <= maxTugs
@@ -55,16 +115,16 @@ class Port:
 		self.cumulTimeTankersDone = 0.0
 		self.debugDebug("End of initialization.")
 	
+	
+	
 	def simulate(self):
 		"""
-		So it will be a while loop 
-			while 
-				get first event
-				if event = pouet1:
-					dfkfjlskdf
-				elif event = pouet2:
-					<lkdjfml<
-				etc.
+		Launches the simulation. It generates a first oil tanker then launches 
+		a loop. The loop iterates on time. 
+		At each iteration, we get the type of next event, the time at which it 
+		occurs, and potentially an oil tanker if the event concerns an oil tanker.
+		Then it checks which event is the next and uses the corresponding routine.
+		The loop stops after some time, given at the construction of the instance.
 		"""
 		self.debugDebug("Simulation starting.")
 		self.generateOilTanker()		
@@ -90,9 +150,11 @@ class Port:
 			elif event == "TugAvailable":
 				self.routineTugAvailable()
 				
-			# self.debugDebug("Event to remove : " + event)
+			self.debugDebug("Event to remove : " + event)
 			self.listEvents.removeLastEvent(event)
 			# print self.listEvents
+		
+		
 		
 	def generateOilTanker(self):
 		"""
@@ -100,17 +162,17 @@ class Port:
 		parameter Port.lambdat, adds the OilTanker to the list of events.
 		"""
 		self.tankerCountTotalGenerated += 1
-		t = random.expovariate(Port.lambdat(self.time))
+		t = random.expovariate(self.lambdat())
 		#self.oilTankersEntrance.append(OilTanker(t, self.tankerCountTotalGenerated))
 		self.listEvents.addEvent("ArrivalOilTankerEntrance", self.time + t, OilTanker.OilTanker(self.time + t, self.tankerCountTotalGenerated))
 	
 	
-	@staticmethod
-	def lambdat(t):
+	
+	def lambdat():
 		"""
 		Generates the lambda depending on the time "t".
 		"""
-		t = t % 24.0
+		t = self.time % 24.0
 		lt = 0
 		if 0.0 <= t and t < 5.0:
 			lt = 2.0/5.0*t + 5.0
@@ -125,7 +187,22 @@ class Port:
 		return lt
 	
 	
+	
 	def routineArrivalOilTankerEntrance(self, oilTanker):
+		"""
+		Routine supposed to be triggered when "oilTanker" arrives at the entrance
+		of the port.
+		When "oilTanker" arrives at the entrance:
+			- increment the number of waiting tankers + add it to the list 
+			self.oilTankersEntrance (which is the queue in the entrance of the 
+			port)
+			- generate another arrival of another tanker.
+			- if a tug is free, we ask it to come take the oilTanker (i.e. add 
+			the event "ArrivalTugEntrance" after a time Normal(self.muEmpty, self.sigEmpty))
+			
+		Arguments:
+			oilTanker		The arriving oil tanker.
+		"""
 		self.tankerCountWaiting += 1
 		self.generateOilTanker()
 		self.oilTankersEntrance.append(oilTanker)
@@ -135,8 +212,15 @@ class Port:
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugEntrance", self.time + t)
 			
+			
 	
 	def routineArrivalTugEntrance(self):
+		"""
+		Routine supposed to be triggered when a tug arrives at the entrance of 
+		the port to take an oil tanker.
+		The tug takes the first oil tanker and leads it to a wharf. It adds an 
+		event "ArrivalOilTankerWharf" to the list.
+		"""
 		t = random.normalvariate(self.muFull, self.sigFull)
 		ot = self.oilTankersEntrance[0]
 		self.oilTankersEntrance.remove(ot)
@@ -147,7 +231,14 @@ class Port:
 	
 	def routineArrivalOilTankerWharf(self, oilTanker):
 		"""
-		Wait ??? 
+		Routine supposed to be triggered when "oilTanker" arrives at the wharf.
+		The oilTanker is preparing to unload its content and it frees the tug.
+		Adds the events "TugAvailable" and "UnloadingDone" to the list.
+		
+		Arguments:
+			oilTanker		The oil tanker that arrives to the wharf.
+
+		OJO
 		There can be a blocked situation here!
 		If: the wharves are full 
 			+ the oilTankers in the wharves need a tug to exit the wharves 
@@ -161,36 +252,73 @@ class Port:
 			self.listEvents.addEvent("UnloadingDone", self.time + t, oilTanker)
 			self.oilTankersWharves.append(oilTanker)
 		else:
-			print "Risk of blocked situation."
+			print "Risk of blocked situation. I don't kow how to handle it."
 			raw_input()
 	
 	
+	
 	def routineUnloadingDone(self, oilTanker):
+		"""
+		Routine supposed to be triggered when "oilTanker" is done unloading at 
+		a wharf.
+		Moves "oilTanker" from self.oilTankersWharves to self.oilTankersWharvesDone
+		and calls for a tug is one is free (i.e. it adds an event "ArrivalTugWharf" 
+		if a tug is avaiblable.)
+		
+		Arguments:
+			oilTanker 		The oil tanker whose unloading is done.
+		"""
 		self.oilTankersWharves.remove(oilTanker)
+		self.oilTankersWharvesDone.append(oilTanker)
 		
 		if self.freeTugs > 0:
 			self.freeTugs -= 1
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugWharf", self.time + t)
-		else:
-			self.oilTankersWharvesDone.append(oilTanker)
+
+			
 			
 	def routineArrivalTugWharf(self):
+		"""
+		Routine supposed to be triggered when a tug arrives at a wharf to take 
+		care of an oil tanker.
+		Starts the evacuation of the oil tanker.
+		Adds "ExitOilTanker" to the list of events.
+		"""
 		t = random.normalvariate(self.muFull, self.sigFull)
 		ot = self.oilTankersWharvesDone[0]
+		self.oilTankerWharvesDone = self.oilTankersWharvesDone[1:]
 		self.listEvents.addEvent("ExitOilTanker", self.time + t, ot)
 		
 	
 	
 	def routineExitOilTanker(self, oilTanker):
-		# oilTanker.addTime(self.time, False) #Already done in addEvent?
+		"""
+		Routine supposed to be triggered when "oilTanker" exits the port.
+		Here are supposed to occur the whole steps of calculations.
+		Then the tug is available (adds an event "TugAvailable" to the list).
+		
+		Arguments:
+			oilTanker		The oil tanker that leaves the port.
+		"""
 		self.cumulTimeTankersDone = oilTanker.getTotalTime()
 		self.tankerCountInside -= 1
 		self.tankerCountDone += 1
 		self.listEvents.addEvent("TugAvailable", self.time)
 		
 	
+	
 	def routineTugAvailable(self):
+		"""
+		Routine supposed to be triggered when a tug becomes available.
+		If a tug becomes available while there are some oil tankers waiting in 
+		the entrance, the tug will take care of them (i.e. adds an event 
+		"ArrivalTugEntrance" to the list).
+		If a tug becomes available while the queue at the entrance is empty, 
+		and an oil tanker is done at the wharves, the tug will go to the wharves 
+		(i.e. adds an event "ArrivalTugWharf" to the list).
+		Otherwise, the tug becomes available for further use.
+		"""
 		if len(self.oilTankersEntrance) > 0:
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugEntrance", self.time + t)
@@ -201,24 +329,22 @@ class Port:
 			self.freeTugs += 1
 		
 		
+		
 	def debugDebug(self, s):
+		"""
+		A classical debug/pause method.
+		
+		Arguments:
+			s 			The text to print before the pause.
+		"""
 		if ISDEBUG:
 			print s
 			raw_input()
-		
-# self.events = {"ArrivalOilTankerEntrance": [],
-				# "ArrivalTugEntrance": [],
-				# "ArrivalOilTankerWharf": [],
-				# "UnloadingDone": [],
-				# "ArrivalTugWharf": [],
-				# "ExitOilTanker": [],
-				# "TugAvailable": []
-				# }
-		
-		
-		
-		
-		
+
+			
+			
+			
+			
 		
 		
 		

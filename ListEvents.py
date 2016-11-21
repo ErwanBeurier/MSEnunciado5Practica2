@@ -1,5 +1,38 @@
 # -*- coding:utf8 -*-
 
+
+"""============================================================================
+								ENUNCIADO 5
+								PRACTICA 2
+								
+	BEURIER Erwan
+	CANAVATE VEGA Fernando
+	DE LA ROSA Augustin
+	NAPOLI Luca 
+
+	This file contains the implementation of the class ListEvents.
+	
+	Useful methods:
+		addEvent()
+		getNextEvent()
+		removeLastEvent()
+	(The rest is supposed to be private, even if Python doesn't know about 
+	encapsulation)
+	
+	This file is not supposed to be launched via console.
+	
+	
+	Vocabulary (because the code is in English but the wording is in Spanish):
+		tug 		= remolcador
+		oil tanker	= petrolero
+		wharf 		= muelle
+	
+	
+TODO:
+
+============================================================================"""
+
+
 import OilTanker
 
 class ListEvents:
@@ -14,6 +47,8 @@ class ListEvents:
 	Attributes:
 		events			Dictionary (events, list of times). The events are 
 						supposed to occur at the times given in the list.
+		tankers			Dictionary (events, list of tankers). Contains the 
+						tankers corresponding to the event.
 	"""
 	def __init__(self):
 		"""
@@ -32,10 +67,6 @@ class ListEvents:
 						"UnloadingDone": [],
 						"ExitOilTanker": [],
 						}
-		# self.defaultOilTanker = OilTanker.OilTanker(0, -1)
-		# self.nextEvent = ""
-		# self.nextTime = 0.0
-		# self.nextOilTanker = None 
 	
 	def addEvent(self, event, time, oilTanker = None):
 		"""
@@ -48,8 +79,8 @@ class ListEvents:
 						events make sense in this simulation.
 			time 		Time in minutes. The timestamp at which the event is 
 						supposed to occur.
-			oilTanker	In the special case in which the event is an "UnloadingDone", 
-						we need to know which tanker is concerned.
+			oilTanker	In the special case in which the event concerns an oil 
+						tanker, we need to know which tanker is concerned.
 		"""
 		self.events[event].append(time)
 		
@@ -115,8 +146,8 @@ class ListEvents:
 	def getNextEvent(self):
 		"""
 		Searches the attribute "events" to find the next event to come. Returns 
-		the event and the time at which it's supposed to occur.
-		
+		the event, the time at which it's supposed to occur, and potentially the 
+		oil tanker that is concerned.
 		"""
 		minEvent = ""
 		minTime = 1000000.0
@@ -128,7 +159,6 @@ class ListEvents:
 				minTime = value[0]
 				if key in self.tankers.keys():
 					minOilTanker = self.tankers[key][0]
-		# self.nextEvent, self.nextTime, self.nextOilTanker = minEvent, minTime, minOilTanker
 		return minEvent, minTime, minOilTanker
 	
 	
