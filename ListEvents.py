@@ -177,11 +177,10 @@ class ListEvents:
 	def __str__(self):
 		s = "self.events: \r\n" + str(self.events) + "\r\nself.tankers: \r\n" + str(self.tankers)
 		return s
+				
 		
-		
-		
-		
-		
+	def getNumTankers(self, event):
+		return len(self.tankers[event])
 		
 		
 		

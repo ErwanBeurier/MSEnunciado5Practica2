@@ -32,3 +32,4 @@ if __name__=="__main__":
 	port.simulate()
 	t = time.clock() - t
 	print "Simulation done in " + str(t) + " seconds."
+	port.printResults()

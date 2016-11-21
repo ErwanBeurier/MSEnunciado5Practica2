@@ -13,6 +13,7 @@
 	This file contains the implementation of the class Port.
 	Useful methods:
 		simulate()
+		printResults()
 	(The rest is supposed to be private, even if Python doesn't know about 
 	encapsulation)
 	
@@ -54,6 +55,8 @@ class Port:
 		freeTugs				Number of free tugs in the port.
 		time					The clock in the port (in minutes). Updates at 
 								each iteration of the method Port.simulate().
+		previousTime			The time of the last event. Useful to compute 
+								the means.
 		maxTime					The time that the simulation is supposed to last 
 								(in minutes).
 		listEvents				A register that stores events, their time of 
@@ -74,7 +77,27 @@ class Port:
 								Mandatory to identify tankers (a tanker has an 
 								id).
 		cumulTimeTankersDone	Counts the time took by tankers inside the port.
-
+		meanNumOilTankersEntrance	Mean number of oil tankers in the entrance. 
+									Updates at every iteration of simulate().
+		maxNumOilTankersEntrance	Max number of oil tankers in the entrance. 
+									Updates at every iteration of simulate().
+		meanNumOilTankersInside		Mean number of oil tankers inside the port. 
+									Updates at every iteration of simulate().
+		maxNumOilTankersInside		Max number of oil tankers inside the port. 
+									Updates at every iteration of simulate().
+		meanTimeOilTankerInside		Mean time spent by oil tankers inside the 
+									port. Updates at every iteration of simulate().
+		maxTimeOilTankerInside		Max time spent by oil tankers inside the 
+									port. Updates every time an oil tanker leaves 
+									the port.
+		meanTimeOilTankersUnloading		Mean time spent by oil tankers to unload. 
+										Updates at every iteration of simulate().
+		maxTimeOilTankersUnloading		Max time spent by oil tankers to unload. 
+										Updates at every iteration of simulate().
+		meanNumOilTankersWharves	Mean number of oil tankers at the wharves. 
+									Updates at every iteration of simulate().
+		maxNumOilTankersWharves 	Max number of oil tankers at the wharves. 
+									Updates at every iteration of simulate().
 	"""
 	def __init__(self, maxWharves, maxTugs, timeSimulation, muEmpty = 2, sigEmpty = 1, muFull = 10, sigFull = 3):
 		"""
@@ -102,6 +125,7 @@ class Port:
 		self.oilTankersWharvesDone = [] # The indices in oilTankerWharves that have finished unloading.
 		self.freeTugs = maxTugs # size <= maxTugs
 		self.time = 0.0
+		self.previousTime = 0.0
 		self.maxTime = timeSimulation
 		self.listEvents = ListEvents.ListEvents()
 		self.muEmpty = muEmpty
@@ -109,10 +133,20 @@ class Port:
 		self.muFull = muFull
 		self.sigFull = sigFull
 		self.tankerCountDone = 0
-		self.tankerCountInside = 0
+		self.tankerCountInside = 0 # Inside = between the moment they leave the entrance queue and the moment they get out of the port.
 		self.tankerCountWaiting = 0
-		self.tankerCountTotalGenerated = 0 # Increments 
+		self.tankerCountTotalGenerated = 0 # Increments each time a tanker is generated. 
 		self.cumulTimeTankersDone = 0.0
+		self.meanNumOilTankersEntrance = 0.0
+		self.maxNumOilTankersEntrance = 0.0
+		self.meanNumOilTankersInside = 0.0
+		self.maxNumOilTankersInside = 0.0
+		self.meanTimeOilTankerInside = 0.0 # 
+		self.maxTimeOilTankerInside = 0.0
+		self.meanTimeOilTankersUnloading = 0.0 # Unloading = between the moment they leave the entrance and the moment they finish unloading.
+		self.maxTimeOilTankersUnloading = 0.0
+		self.meanNumOilTankersWharves = 0.0 # The mean number of boats at the wharves.
+		self.maxNumOilTankersWharves = 0.0
 		self.debugDebug("End of initialization.")
 	
 	
@@ -132,8 +166,10 @@ class Port:
 		oilTanker = None 
 		
 		while self.time < self.maxTime:
+			self.previousTime = self.time
 			event, self.time, oilTanker = self.listEvents.getNextEvent()
 			self.debugDebug("Step : " + event + " after time : "+ str(self.time) + "Oil Tanker : " + str(oilTanker))
+			self.updateTimes()
 			
 			if event == "ArrivalOilTankerEntrance":
 				self.routineArrivalOilTankerEntrance(oilTanker)
@@ -154,6 +190,7 @@ class Port:
 			self.listEvents.removeLastEvent(event)
 			# print self.listEvents
 		
+		self.lastUpdateTimes()
 		
 		
 	def generateOilTanker(self):
@@ -168,7 +205,7 @@ class Port:
 	
 	
 	
-	def lambdat():
+	def lambdat(self):
 		"""
 		Generates the lambda depending on the time "t".
 		"""
@@ -305,8 +342,7 @@ class Port:
 		self.tankerCountInside -= 1
 		self.tankerCountDone += 1
 		self.listEvents.addEvent("TugAvailable", self.time)
-		
-	
+		self.maxTimeOilTankerInside = max(self.maxTimeOilTankerInside, self.time - oilTanker.getEntranceTime())
 	
 	def routineTugAvailable(self):
 		"""
@@ -340,11 +376,77 @@ class Port:
 		if ISDEBUG:
 			print s
 			raw_input()
-
+	
+	
+	def getNumOilTankersInside(self):
+		"""
+		Returns the number of oil tankers inside the port.
+		"""
+		return self.listEvents.getNumTankers("ArrivalOilTankerWharf") + self.listEvents.getNumTankers("ExitOilTanker") + len(self.oilTankersWharves) + len(self.oilTankersWharvesDone)
 			
 			
-			
-			
+	def updateTimes(self):
+		"""
+		Updates inner variables in anticipation of the results.
+		"""
+		intervalTime = self.time - self.previousTime
+		
+		self.meanNumOilTankersEntrance += len(self.oilTankersEntrance)*intervalTime
+		self.maxNumOilTankersEntrance = max(len(self.oilTankersEntrance), self.maxNumOilTankersEntrance)
+		
+		tampon = self.getNumOilTankersInside()
+		
+		self.meanNumOilTankersInside += tampon * intervalTime
+		self.maxNumOilTankersInside = max(tampon, self.maxNumOilTankersInside)
+		
+		self.meanTimeOilTankerInside += tampon * intervalTime
+		#self.maxTimeOilTankerInside = 0.0 # I don't know how to update this one. Needs to be updated in routineExitOilTanker
+		
+		self.meanTimeOilTankersUnloading += len(self.oilTankersWharves) * intervalTime
+		self.maxTimeOilTankersUnloading = max(len(self.oilTankersWharves), self.maxTimeOilTankersUnloading)
+		
+		self.meanNumOilTankersWharves += (len(self.oilTankersWharves) + len(self.oilTankersWharvesDone)) * intervalTime
+		self.maxNumOilTankersWharves = max(len(self.oilTankersWharves) + len(self.oilTankersWharvesDone), self.maxNumOilTankersWharves)
+		
+		
+	def lastUpdateTimes(self):
+		"""
+		Updates a last time all the values, and calculates the means.
+		"""
+		self.updateTimes()
+		
+		self.meanNumOilTankersEntrance /= self.time
+		self.meanNumOilTankersInside /= self.time
+		self.meanTimeOilTankersUnloading /= self.time
+		self.meanNumOilTankersWharves /= self.time
+		
+		
+		
+	def printResults(self):
+		"""
+		Prints the results of the simulation.
+		"""
+		print "--------------------------------------------"
+		print "Results of the simulation:"
+		print "Mean number of oil tankers waiting in the entrance: " + str(self.meanNumOilTankersEntrance)
+		print "Max number of oil tankers waiting in the entrance: " + str(self.maxNumOilTankersEntrance)
+		print "Mean number of oil tankers inside the port: " + str(self.meanNumOilTankersInside)
+		print "Max number of oil tankers inside the port: " + str(self.maxNumOilTankersInside)
+		print "Mean time spent by the tankers inside the port: " + str(self.meanTimeOilTankerInside)
+		print "Max time spent by the tankers inside the port: " + str(self.maxTimeOilTankerInside)
+		print "Mean time spent by the tankers unloading at the wharves: " + str(self.meanTimeOilTankersUnloading)
+		print "Max time spent by the tankers unloading at the wharves: " + str(self.maxTimeOilTankersUnloading)
+		print "Mean time spent by the tankers at the wharves: " + str(self.meanNumOilTankersWharves)
+		print "Max time spent by the tankers at the wharves: " + str(self.maxNumOilTankersWharves)
+		print "--------------------------------------------"
+		
+		
+		
+		
+		
+		
+		
+		
 		
 		
 		

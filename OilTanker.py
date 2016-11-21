@@ -58,6 +58,7 @@ class OilTanker:
 		"""
 		self.id = id
 		self.arrivalTime = t
+		self.entranceTime = t
 		self.lastTimeTookCare = t
 		self.totalTime = 0.0
 		self.listTimes = [0.0]
@@ -96,16 +97,14 @@ class OilTanker:
 			interval 	Defines the sense of the argument "t" : interval of time 
 						or timestamp.
 		"""
+		t1 = t
 		
-		if interval:
-			self.listTimes.append(t)
-			self.totalTime += t
-			self.lastTimeTookCare += t
-		else:
+		if not interval:
 			t1 = t - self.lastTimeTookCare
-			self.listTimes.append(t1)
-			self.totalTime += t1
-			self.lastTimeTookCare += t1
+			
+		self.listTimes.append(t1)
+		self.totalTime += t1
+		self.lastTimeTookCare += t1
 	
 	def getTotalTime(self):
 		"""
@@ -113,11 +112,17 @@ class OilTanker:
 		"""
 		return self.totalTime
 		
+	def getLastTimeTookCare(self):
+		"""
+		Accessor method.
+		"""
+		return self.lastTimeTookCare
 		
-		
-		
-		
-		
+	def getEntranceTime(self):
+		"""
+		Accessor method.
+		"""
+		return self.arrivalTime + self.listTimes[1]
 		
 		
 		
