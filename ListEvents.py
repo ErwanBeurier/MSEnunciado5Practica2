@@ -169,18 +169,37 @@ class ListEvents:
 		Arguments:
 			event		The event the first time of which should be removed.
 		"""
-		self.events[event] = self.events[event][1:]
+		self.events[event].pop(0)# = self.events[event][1:]
 		if event in self.tankers.keys():
-			self.tankers[event] = self.tankers[event][1:]
+			#self.tankers[event] = self.tankers[event][1:]
+			self.tankers[event].pop(0) #.remove(self.tankers[event][0])
 
-
+	@staticmethod
+	def strDico(dico):
+		s = ""
+		for key, value in dico.iteritems():
+			s = s + "\r\n  " + str(key) + ": " + ListEvents.strList(value)
+		return s
+	
+	@staticmethod
+	def strList(lis):
+		s = "["
+		for pouet in lis:
+			s += str(pouet)+ ", "
+		s += "]"
+		return s
+	
 	def __str__(self):
-		s = "self.events: \r\n" + str(self.events) + "\r\nself.tankers: \r\n" + str(self.tankers)
+		s = "self.events: \r\n" + ListEvents.strDico(self.events) 
+		s += "\r\nself.tankers: \r\n" + ListEvents.strDico(self.tankers)
 		return s
 				
 		
 	def getNumTankers(self, event):
 		return len(self.tankers[event])
+		
+	def getListEventSize(self, event):
+		return len(self.events[event])
 		
 		
 		

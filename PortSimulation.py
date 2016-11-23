@@ -41,6 +41,8 @@ import OilTanker
 
 
 ISDEBUG = True 
+SAFEPORT = False
+
 
 class Port:
 	"""
@@ -108,14 +110,16 @@ class Port:
 			maxTugs				The maximum number of tugs in the port.
 			timeSimulation		The duration of the simulation.
 			muEmpty				The mean of the time took by the tugs to reach 
-								their destination when empty.
+								their destination when empty. In minutes.
 			sigEmpty			The standard deviation of the time took by the 
-								tugs to reach their destination when empty.
+								tugs to reach their destination when empty. In 
+								minutes.
 			muFull				The mean of the time took by the tugs to reach 
-								their destination when carrying an oil tanker.
+								their destination when carrying an oil tanker. 
+								In minutes.
 			sigFull				The standard deviation of the time took by the 
 								tugs to reach their destination when carrying 
-								an oil tanker.
+								an oil tanker. In minutes.
 		"""
 		self.debugDebug("Initialization starting.")
 		self.maxWharves = maxWharves
@@ -184,11 +188,21 @@ class Port:
 			elif event == "ExitOilTanker":
 				self.routineExitOilTanker(oilTanker)
 			elif event == "TugAvailable":
-				self.routineTugAvailable()
-				
+				if SAFEPORT:
+					self.routineTugAvailableSafe()
+				else:
+					self.routineTugAvailable()
+			
+			oilTanker = None
 			self.debugDebug("Event to remove : " + event)
 			self.listEvents.removeLastEvent(event)
-			# print self.listEvents
+			
+			if ISDEBUG:
+				print "Time: " + str(self.time)
+				print self.listEvents
+				print "All lists: "
+				print self.printAllLists()
+				raw_input()
 		
 		self.lastUpdateTimes()
 		
@@ -199,28 +213,33 @@ class Port:
 		parameter Port.lambdat, adds the OilTanker to the list of events.
 		"""
 		self.tankerCountTotalGenerated += 1
-		t = random.expovariate(self.lambdat())
+		lt = self.lambdat()/60
+		t = random.expovariate(lt)
+		self.debugDebug(t)
 		#self.oilTankersEntrance.append(OilTanker(t, self.tankerCountTotalGenerated))
-		self.listEvents.addEvent("ArrivalOilTankerEntrance", self.time + t, OilTanker.OilTanker(self.time + t, self.tankerCountTotalGenerated))
+		ot = OilTanker.OilTanker(self.time + t, self.tankerCountTotalGenerated)
+		self.listEvents.addEvent("ArrivalOilTankerEntrance", self.time + t, ot)
 	
 	
 	
 	def lambdat(self):
 		"""
-		Generates the lambda depending on the time "t".
+		Generates the lambda depending on the time "self.time".
 		"""
-		t = self.time % 24.0
+		t = (self.time / 60.0) % 24.0
 		lt = 0
 		if 0.0 <= t and t < 5.0:
-			lt = 2.0/5.0*t + 5.0
+			lt = 2.0*t/5.0 + 5.0
 		elif 5.0 <= t and t < 9.0:
-			lt = -1.0/4.0*t + 33.0/4
+			lt = -1.0*t/4.0 + 33.0/4
 		elif 9.0 <= t and t < 15.0:
-			lt = 1.0/2.0*t + 3.0/2.0
+			lt = 1.0*t/2.0 + 3.0/2.0
 		elif 15.0 <= t and t < 17.0:
-			lt = -3.0/2.0*t + 63.0/2.0
+			lt = -3.0*t/2.0 + 63.0/2.0
 		else:
-			lt = -1.0/7.0*t + 59.0/7.0
+			lt = -1.0*t/7.0 + 59.0/7.0
+		self.debugDebug(str(t) + " + lambda: " + str(lt))
+
 		return lt
 	
 	
@@ -249,7 +268,18 @@ class Port:
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugEntrance", self.time + t)
 			
-			
+	@staticmethod	
+	def printList(st, li):
+		s = st + "["
+		for i in li:
+			s += str(i) + ", "
+		s += "]"
+		print s
+		
+	def printAllLists(self):
+		Port.printList("otEntrance: ", self.oilTankersEntrance)	
+		Port.printList("otWharves: ", self.oilTankersWharves)	
+		Port.printList("otWDone: ", self.oilTankersWharvesDone)	
 	
 	def routineArrivalTugEntrance(self):
 		"""
@@ -259,8 +289,8 @@ class Port:
 		event "ArrivalOilTankerWharf" to the list.
 		"""
 		t = random.normalvariate(self.muFull, self.sigFull)
-		ot = self.oilTankersEntrance[0]
-		self.oilTankersEntrance.remove(ot)
+		ot = self.oilTankersEntrance.pop(0)
+		#self.oilTankersEntrance.remove(ot)
 		self.listEvents.addEvent("ArrivalOilTankerWharf", self.time + t, ot)
 		self.tankerCountWaiting -= 1
 		self.tankerCountInside += 1
@@ -308,7 +338,7 @@ class Port:
 		self.oilTankersWharves.remove(oilTanker)
 		self.oilTankersWharvesDone.append(oilTanker)
 		
-		if self.freeTugs > 0:
+		if self.freeTugs > 0 and self.listEvents.getListEventSize("ArrivalTugWharf") < len(self.oilTankersWharvesDone) :
 			self.freeTugs -= 1
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugWharf", self.time + t)
@@ -323,8 +353,8 @@ class Port:
 		Adds "ExitOilTanker" to the list of events.
 		"""
 		t = random.normalvariate(self.muFull, self.sigFull)
-		ot = self.oilTankersWharvesDone[0]
-		self.oilTankerWharvesDone = self.oilTankersWharvesDone[1:]
+		ot = self.oilTankersWharvesDone.pop(0) #self.oilTankersWharvesDone[0]
+		#self.oilTankersWharvesDone.remove(ot)  # = self.oilTankersWharvesDone[1:]
 		self.listEvents.addEvent("ExitOilTanker", self.time + t, ot)
 		
 	
@@ -343,10 +373,16 @@ class Port:
 		self.tankerCountDone += 1
 		self.listEvents.addEvent("TugAvailable", self.time)
 		self.maxTimeOilTankerInside = max(self.maxTimeOilTankerInside, self.time - oilTanker.getEntranceTime())
+		if self.maxTimeOilTankerInside > 10000:
+			print "Pause: " + str(len(oilTanker.listTimes))
+			print "Pause: " + str(oilTanker)
+			raw_input()
 	
 	def routineTugAvailable(self):
 		"""
 		Routine supposed to be triggered when a tug becomes available.
+		Gives priority to coming oil tankers over oil tankers that are done 
+		unloading.
 		If a tug becomes available while there are some oil tankers waiting in 
 		the entrance, the tug will take care of them (i.e. adds an event 
 		"ArrivalTugEntrance" to the list).
@@ -355,12 +391,34 @@ class Port:
 		(i.e. adds an event "ArrivalTugWharf" to the list).
 		Otherwise, the tug becomes available for further use.
 		"""
-		if len(self.oilTankersEntrance) > 0:
+		if len(self.oilTankersEntrance) > 0 and self.listEvents.getListEventSize("ArrivalTugEntrance") < len(self.oilTankersEntrance) :
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugEntrance", self.time + t)
-		elif len(self.oilTankersWharvesDone) > 0:
+		elif len(self.oilTankersWharvesDone) > 0 and self.listEvents.getListEventSize("ArrivalTugWharf") < len(self.oilTankersWharvesDone) :
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugWharf", self.time + t)
+		elif self.freeTugs < self.maxTugs: # Should not occur, but well...
+			self.freeTugs += 1
+		
+	def routineTugAvailableSafe(self):
+		"""
+		Routine supposed to be triggered when a tug becomes available.
+		Gives priority to unloaded oil tankers over oil tankers that are coming 
+		to the port.
+		If a tug becomes available and an oil tanker is done at the wharves, 
+		the tug will go to the wharves (i.e. adds an event "ArrivalTugWharf" 
+		to the list).
+		If a tug becomes available while there are some oil tankers waiting in 
+		the entrance and no oil tanker is waiting at the wharves, the tug will 
+		take care of them (i.e. adds an event "ArrivalTugEntrance" to the list).
+		Otherwise, the tug becomes available for further use.
+		"""
+		if len(self.oilTankersWharvesDone) > 0 and self.listEvents.getListEventSize("ArrivalTugWharf") < len(self.oilTankersWharvesDone) :
+			t = random.normalvariate(self.muEmpty, self.sigEmpty)
+			self.listEvents.addEvent("ArrivalTugWharf", self.time + t)
+		elif len(self.oilTankersEntrance) > 0 and self.listEvents.getListEventSize("ArrivalTugEntrance") < len(self.oilTankersEntrance) :
+			t = random.normalvariate(self.muEmpty, self.sigEmpty)
+			self.listEvents.addEvent("ArrivalTugEntrance", self.time + t)
 		elif self.freeTugs < self.maxTugs: # Should not occur, but well...
 			self.freeTugs += 1
 		
@@ -391,10 +449,10 @@ class Port:
 		"""
 		intervalTime = self.time - self.previousTime
 		
-		self.meanNumOilTankersEntrance += len(self.oilTankersEntrance)*intervalTime
+		self.meanNumOilTankersEntrance += float(len(self.oilTankersEntrance))*intervalTime
 		self.maxNumOilTankersEntrance = max(len(self.oilTankersEntrance), self.maxNumOilTankersEntrance)
 		
-		tampon = self.getNumOilTankersInside()
+		tampon = float(self.getNumOilTankersInside())
 		
 		self.meanNumOilTankersInside += tampon * intervalTime
 		self.maxNumOilTankersInside = max(tampon, self.maxNumOilTankersInside)
@@ -403,7 +461,7 @@ class Port:
 		#self.maxTimeOilTankerInside = 0.0 # I don't know how to update this one. Needs to be updated in routineExitOilTanker
 		
 		self.meanTimeOilTankersUnloading += len(self.oilTankersWharves) * intervalTime
-		self.maxTimeOilTankersUnloading = max(len(self.oilTankersWharves), self.maxTimeOilTankersUnloading)
+		self.maxTimeOilTankersUnloading = max(float(len(self.oilTankersWharves)), self.maxTimeOilTankersUnloading)
 		
 		self.meanNumOilTankersWharves += (len(self.oilTankersWharves) + len(self.oilTankersWharvesDone)) * intervalTime
 		self.maxNumOilTankersWharves = max(len(self.oilTankersWharves) + len(self.oilTankersWharvesDone), self.maxNumOilTankersWharves)
@@ -419,7 +477,7 @@ class Port:
 		self.meanNumOilTankersInside /= self.time
 		self.meanTimeOilTankersUnloading /= self.time
 		self.meanNumOilTankersWharves /= self.time
-		
+		self.meanTimeOilTankerInside /= self.time
 		
 		
 	def printResults(self):
