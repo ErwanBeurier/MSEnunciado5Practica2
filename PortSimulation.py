@@ -36,12 +36,21 @@ TODO:
 import random
 from scipy.stats import t as tStudent
 from scipy.stats import norm
+from scipy.stats import chi2
 import ListEvents
 import OilTanker
 
 
 ISDEBUG = True 
 SAFEPORT = False
+LOGPORT = True
+
+def minutesToTime(minutes):
+	hours = int(minutes/60)
+	minutes = int(minutes - hours * 60)
+	days = int(hours/24)
+	hours = hours - days*24
+	return str(days) + "d" + str(hours) + "h" + str(minutes) + "m"
 
 
 class Port:
@@ -151,6 +160,7 @@ class Port:
 		self.maxTimeOilTankersUnloading = 0.0
 		self.meanNumOilTankersWharves = 0.0 # The mean number of boats at the wharves.
 		self.maxNumOilTankersWharves = 0.0
+		self.numTimesBlocked = 0
 		self.debugDebug("End of initialization.")
 	
 	
@@ -168,7 +178,8 @@ class Port:
 		self.generateOilTanker()		
 		event = ""
 		oilTanker = None 
-		
+		stopThat = False
+
 		while self.time < self.maxTime:
 			self.previousTime = self.time
 			event, self.time, oilTanker = self.listEvents.getNextEvent()
@@ -197,12 +208,11 @@ class Port:
 			self.debugDebug("Event to remove : " + event)
 			self.listEvents.removeLastEvent(event)
 			
-			if ISDEBUG:
-				print "Time: " + str(self.time)
-				print self.listEvents
-				print "All lists: "
-				print self.printAllLists()
-				raw_input()
+			if LOGPORT and not stopThat:
+				self.printState()
+				stopThat = (raw_input() != "")
+			if self.detectBlockedSituation:
+				self.numTimesBlocked += 1
 		
 		self.lastUpdateTimes()
 		
@@ -213,8 +223,8 @@ class Port:
 		parameter Port.lambdat, adds the OilTanker to the list of events.
 		"""
 		self.tankerCountTotalGenerated += 1
-		lt = self.lambdat()/60
-		t = random.expovariate(lt)
+		lt = self.lambdat()
+		t = 60*random.expovariate(lt)
 		self.debugDebug(t)
 		#self.oilTankersEntrance.append(OilTanker(t, self.tankerCountTotalGenerated))
 		ot = OilTanker.OilTanker(self.time + t, self.tankerCountTotalGenerated)
@@ -268,18 +278,6 @@ class Port:
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugEntrance", self.time + t)
 			
-	@staticmethod	
-	def printList(st, li):
-		s = st + "["
-		for i in li:
-			s += str(i) + ", "
-		s += "]"
-		print s
-		
-	def printAllLists(self):
-		Port.printList("otEntrance: ", self.oilTankersEntrance)	
-		Port.printList("otWharves: ", self.oilTankersWharves)	
-		Port.printList("otWDone: ", self.oilTankersWharvesDone)	
 	
 	def routineArrivalTugEntrance(self):
 		"""
@@ -312,16 +310,19 @@ class Port:
 			+ the tugs are carrying an oil tanker to the wharves
 		
 		"""
-		if len(self.oilTankersWharves) + len(self.oilTankersWharvesDone) < 20: 
+		if len(self.oilTankersWharves) + len(self.oilTankersWharvesDone) < self.maxWharves: 
 			# It means that a wharf is free to deal with the oilTanker.
 			self.listEvents.addEvent("TugAvailable", self.time)
-			t = tStudent.rvs(3)
+			#t = tStudent.rvs(3)
+			t = 60*chi2.rvs(3)
 			self.listEvents.addEvent("UnloadingDone", self.time + t, oilTanker)
 			self.oilTankersWharves.append(oilTanker)
-		else:
-			print "Risk of blocked situation. I don't kow how to handle it."
+		elif self.detectBlockedSituation():
+			print "Blocked situation. I don't kow how to handle it."
+			self.printState()
 			raw_input()
 	
+
 	
 	
 	def routineUnloadingDone(self, oilTanker):
@@ -494,15 +495,43 @@ class Port:
 		print "Max time spent by the tankers inside the port: " + str(self.maxTimeOilTankerInside)
 		print "Mean time spent by the tankers unloading at the wharves: " + str(self.meanTimeOilTankersUnloading)
 		print "Max time spent by the tankers unloading at the wharves: " + str(self.maxTimeOilTankersUnloading)
-		print "Mean time spent by the tankers at the wharves: " + str(self.meanNumOilTankersWharves)
-		print "Max time spent by the tankers at the wharves: " + str(self.maxNumOilTankersWharves)
+		print "Mean number of tankers at the wharves: " + str(self.meanNumOilTankersWharves)
+		print "Max number of tankers at the wharves: " + str(self.maxNumOilTankersWharves)
+		print "Number of times the port was blocked: " + str(self.numTimesBlocked)
 		print "--------------------------------------------"
 		
 		
+	@staticmethod	
+	def printList(st, li):
+		s = st + "["
+		for i in li:
+			s += str(i) + ", "
+		s += "], size: " + str(len(li))
+		print s
+		
+	def printState(self):
+		print "/\\_/\\_/\\_/\\_/\\_/\\_/\\_/\\_/\\_/\\_/\\_/\\_"
+		print "Current state:"
+		print "Time: " + minutesToTime(self.time) + " (" + str(self.time) + ")"
+		print "Tankers generated: " + str(self.tankerCountTotalGenerated)
+		print "Tankers handled: " + str(self.tankerCountDone)
+		print "FreeTugs: " + str(self.freeTugs)
+		print "Num times blocked: " + str(self.numTimesBlocked)
+		print ""
+		print self.listEvents
+		print "All lists: "
+		print self.printAllLists()
+		
+	def printAllLists(self):
+		Port.printList("otEntrance: ", self.oilTankersEntrance)	
+		Port.printList("otWharves: ", self.oilTankersWharves)	
+		Port.printList("otWDone: ", self.oilTankersWharvesDone)	
 		
 		
-		
-		
+	def detectBlockedSituation(self):
+		blocked = (self.freeTugs == 0 and self.listEvents.getListEventSize("ArrivalTugWharf") == 0)
+		blocked = blocked and (len(self.oilTankersWharves) + len(self.oilTankersWharvesDone) >= self.maxWharves)
+		return blocked
 		
 		
 		

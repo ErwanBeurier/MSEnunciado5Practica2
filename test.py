@@ -27,9 +27,11 @@ import sys
 if __name__=="__main__":
 	PortSimulation.ISDEBUG = ("debug" in sys.argv)
 	PortSimulation.SAFEPORT = ("safe" in sys.argv)
+	PortSimulation.LOGPORT = ("log" in sys.argv)
 	
 	
-	port = PortSimulation.Port(20, 10, 60*24*7)
+	#port = PortSimulation.Port(20, 10, 60*24*7)
+	port = PortSimulation.Port(25, 13, 60*24*7)
 	
 	print "Initialisation done. Simulation starting."
 	t = time.clock()

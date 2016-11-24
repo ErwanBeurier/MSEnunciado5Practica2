@@ -191,7 +191,7 @@ class ListEvents:
 	
 	def __str__(self):
 		s = "self.events: \r\n" + ListEvents.strDico(self.events) 
-		s += "\r\nself.tankers: \r\n" + ListEvents.strDico(self.tankers)
+		s += "\r\n\r\nself.tankers: \r\n" + ListEvents.strDico(self.tankers)
 		return s
 				
 		

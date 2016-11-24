@@ -29,6 +29,10 @@ TODO:
 
 ============================================================================"""
 
+
+from math import log
+
+
 class OilTanker:
 	"""
 	Convenient class. 
@@ -83,8 +87,8 @@ class OilTanker:
 		"""
 		Method to make the instance printable.
 		"""
-		return "Oil Tanker num " + str(self.id) + " arrived at " + str(self.arrivalTime)
-		
+		#return "Oil Tanker num " + str(self.id) + " arrived at " + str(self.arrivalTime)
+		return "OT" + "0"*(4- int(log(self.id, 10))) + str(self.id)
 		
 	def addTime(self, t, interval = True):
 		"""
