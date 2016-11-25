@@ -320,6 +320,7 @@ class Port:
 		elif self.detectBlockedSituation():
 			print "Blocked situation. I don't kow how to handle it."
 			self.printState()
+			self.printResultsOnTheFly()
 			raw_input()
 	
 
@@ -500,6 +501,25 @@ class Port:
 		print "Number of times the port was blocked: " + str(self.numTimesBlocked)
 		print "--------------------------------------------"
 		
+	def printResultsOnTheFly(self):
+		"""
+		Computes and prints the results of the simulation if it were to stop now.
+		"""
+		print "--------------------------------------------"
+		print "Results of the simulation:"
+		print "Mean number of oil tankers waiting in the entrance: " + str(self.meanNumOilTankersEntrance/self.time)
+		print "Max number of oil tankers waiting in the entrance: " + str(self.maxNumOilTankersEntrance)
+		print "Mean number of oil tankers inside the port: " + str(self.meanNumOilTankersInside/self.time)
+		print "Max number of oil tankers inside the port: " + str(self.maxNumOilTankersInside)
+		print "Mean time spent by the tankers inside the port: " + str(self.meanTimeOilTankerInside/self.time)
+		print "Max time spent by the tankers inside the port: " + str(self.maxTimeOilTankerInside)
+		print "Mean time spent by the tankers unloading at the wharves: " + str(self.meanTimeOilTankersUnloading/self.time)
+		print "Max time spent by the tankers unloading at the wharves: " + str(self.maxTimeOilTankersUnloading)
+		print "Mean number of tankers at the wharves: " + str(self.meanNumOilTankersWharves/self.time)
+		print "Max number of tankers at the wharves: " + str(self.maxNumOilTankersWharves)
+		print "Number of times the port was blocked: " + str(self.numTimesBlocked)
+		print "--------------------------------------------"
+		
 		
 	@staticmethod	
 	def printList(st, li):
@@ -531,6 +551,8 @@ class Port:
 	def detectBlockedSituation(self):
 		blocked = (self.freeTugs == 0 and self.listEvents.getListEventSize("ArrivalTugWharf") == 0)
 		blocked = blocked and (len(self.oilTankersWharves) + len(self.oilTankersWharvesDone) >= self.maxWharves)
+		blocked = blocked and (self.listEvents.getListEventSize("TugAvailable") == 0)
+		blocked = blocked and (self.listEvents.getListEventSize("ExitOilTanker") == 0)
 		return blocked
 		
 		
