@@ -161,6 +161,8 @@ class Port:
 		self.meanNumOilTankersWharves = 0.0 # The mean number of boats at the wharves.
 		self.maxNumOilTankersWharves = 0.0
 		self.numTimesBlocked = 0
+		self.meanTimeBeforeUnloading = 0.0
+		self.maxTimeBeforeUnloading = 0.0
 		self.debugDebug("End of initialization.")
 	
 	
@@ -310,6 +312,9 @@ class Port:
 			+ the tugs are carrying an oil tanker to the wharves
 		
 		"""
+		self.maxTimeBeforeUnloading = max(self.maxTimeBeforeUnloading, self.time - oilTanker.getEntranceTime())
+		self.meanTimeBeforeUnloading += self.time - oilTanker.getEntranceTime()
+
 		if len(self.oilTankersWharves) + len(self.oilTankersWharvesDone) < self.maxWharves: 
 			# It means that a wharf is free to deal with the oilTanker.
 			self.listEvents.addEvent("TugAvailable", self.time)
@@ -480,12 +485,15 @@ class Port:
 		self.meanTimeOilTankersUnloading /= self.time
 		self.meanNumOilTankersWharves /= self.time
 		self.meanTimeOilTankerInside /= self.time
+		self.meanTimeBeforeUnloading /= self.time
 		
 		
 	def printResults(self):
 		"""
 		Prints the results of the simulation.
 		"""
+		
+		self.printState()
 		print "--------------------------------------------"
 		print "Results of the simulation:"
 		print "Mean number of oil tankers waiting in the entrance: " + str(self.meanNumOilTankersEntrance)
@@ -494,6 +502,8 @@ class Port:
 		print "Max number of oil tankers inside the port: " + str(self.maxNumOilTankersInside)
 		print "Mean time spent by the tankers inside the port: " + str(self.meanTimeOilTankerInside)
 		print "Max time spent by the tankers inside the port: " + str(self.maxTimeOilTankerInside)
+		print "Mean time before unloading: " + str(self.meanTimeBeforeUnloading)
+		print "Max time before unloading: " + str(self.maxTimeBeforeUnloading)
 		print "Mean time spent by the tankers unloading at the wharves: " + str(self.meanTimeOilTankersUnloading)
 		print "Max time spent by the tankers unloading at the wharves: " + str(self.maxTimeOilTankersUnloading)
 		print "Mean number of tankers at the wharves: " + str(self.meanNumOilTankersWharves)
@@ -513,6 +523,8 @@ class Port:
 		print "Max number of oil tankers inside the port: " + str(self.maxNumOilTankersInside)
 		print "Mean time spent by the tankers inside the port: " + str(self.meanTimeOilTankerInside/self.time)
 		print "Max time spent by the tankers inside the port: " + str(self.maxTimeOilTankerInside)
+		print "Mean time before unloading: " + str(self.meanTimeBeforeUnloading/self.time)
+		print "Max time before unloading: " + str(self.maxTimeBeforeUnloading)
 		print "Mean time spent by the tankers unloading at the wharves: " + str(self.meanTimeOilTankersUnloading/self.time)
 		print "Max time spent by the tankers unloading at the wharves: " + str(self.maxTimeOilTankersUnloading)
 		print "Mean number of tankers at the wharves: " + str(self.meanNumOilTankersWharves/self.time)

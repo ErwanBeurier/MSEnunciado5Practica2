@@ -31,7 +31,8 @@ if __name__=="__main__":
 	
 	
 	#port = PortSimulation.Port(20, 10, 60*24*7)
-	port = PortSimulation.Port(25, 13, 60*24*7)
+	port = PortSimulation.Port(25, 1000, 60*24*7)
+	#
 	
 	print "Initialisation done. Simulation starting."
 	t = time.clock()
