@@ -211,7 +211,7 @@ class Port:
 			if LOGPORT and not stopThat:
 				self.printState()
 				stopThat = (raw_input() != "")
-			if self.detectBlockedSituation:
+			if self.detectBlockedSituation():
 				self.numTimesBlocked += 1
 		
 		self.lastUpdateTimes()
