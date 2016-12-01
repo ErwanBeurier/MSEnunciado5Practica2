@@ -45,12 +45,24 @@ ISDEBUG = True
 SAFEPORT = False
 LOGPORT = True
 
+def mtt(minutes):
+	return minutesToTime(minutes)
+
 def minutesToTime(minutes):
-	hours = int(minutes/60)
+	"""
+	Converts the time in minutes to a time of the readable format: 
+		[Days]d[Hours]h[Minutes]min[Seconds]s
+	
+	Arguments:
+		minutes 		Minutes to convert.
+	"""
+	hours = int(minutes / 60)
+	seconds = int( (minutes - int(minutes)) * 60)
 	minutes = int(minutes - hours * 60)
 	days = int(hours/24)
 	hours = hours - days*24
-	return str(days) + "d" + str(hours) + "h" + str(minutes) + "m"
+	return str(days) + "d " + str(hours) + "h " + str(minutes) + "min " + str(seconds) + "s"
+
 
 
 class Port:
@@ -109,6 +121,7 @@ class Port:
 									Updates at every iteration of simulate().
 		maxNumOilTankersWharves 	Max number of oil tankers at the wharves. 
 									Updates at every iteration of simulate().
+		tankersCountUnloaded		Number of tankers that have unloaded.
 	"""
 	def __init__(self, maxWharves, maxTugs, timeSimulation, muEmpty = 2, sigEmpty = 1, muFull = 10, sigFull = 3):
 		"""
@@ -163,6 +176,7 @@ class Port:
 		self.numTimesBlocked = 0
 		self.meanTimeBeforeUnloading = 0.0
 		self.maxTimeBeforeUnloading = 0.0
+		self.tankersCountUnloaded = 0
 		self.debugDebug("End of initialization.")
 	
 	
@@ -216,7 +230,7 @@ class Port:
 			if self.detectBlockedSituation():
 				self.numTimesBlocked += 1
 		
-		self.lastUpdateTimes()
+		self.updateTimes()
 		
 		
 	def generateOilTanker(self):
@@ -344,7 +358,9 @@ class Port:
 		"""
 		self.oilTankersWharves.remove(oilTanker)
 		self.oilTankersWharvesDone.append(oilTanker)
-		
+		self.tankersCountUnloaded += 1
+		self.maxTimeOilTankersUnloading = max(oilTanker.getLastInterval() , self.maxTimeOilTankersUnloading)
+
 		if self.freeTugs > 0 and self.listEvents.getListEventSize("ArrivalTugWharf") < len(self.oilTankersWharvesDone) :
 			self.freeTugs -= 1
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
@@ -360,8 +376,7 @@ class Port:
 		Adds "ExitOilTanker" to the list of events.
 		"""
 		t = random.normalvariate(self.muFull, self.sigFull)
-		ot = self.oilTankersWharvesDone.pop(0) #self.oilTankersWharvesDone[0]
-		#self.oilTankersWharvesDone.remove(ot)  # = self.oilTankersWharvesDone[1:]
+		ot = self.oilTankersWharvesDone.pop(0) 
 		self.listEvents.addEvent("ExitOilTanker", self.time + t, ot)
 		
 	
@@ -380,6 +395,7 @@ class Port:
 		self.tankerCountDone += 1
 		self.listEvents.addEvent("TugAvailable", self.time)
 		self.maxTimeOilTankerInside = max(self.maxTimeOilTankerInside, self.time - oilTanker.getEntranceTime())
+		
 		if self.maxTimeOilTankerInside > 10000:
 			print "Pause: " + str(len(oilTanker.listTimes))
 			print "Pause: " + str(oilTanker)
@@ -465,27 +481,11 @@ class Port:
 		self.maxNumOilTankersInside = max(tampon, self.maxNumOilTankersInside)
 		
 		self.meanTimeOilTankerInside += tampon * intervalTime
-		#self.maxTimeOilTankerInside = 0.0 # I don't know how to update this one. Needs to be updated in routineExitOilTanker
 		
 		self.meanTimeOilTankersUnloading += len(self.oilTankersWharves) * intervalTime
-		self.maxTimeOilTankersUnloading = max(float(len(self.oilTankersWharves)), self.maxTimeOilTankersUnloading)
 		
 		self.meanNumOilTankersWharves += (len(self.oilTankersWharves) + len(self.oilTankersWharvesDone)) * intervalTime
 		self.maxNumOilTankersWharves = max(len(self.oilTankersWharves) + len(self.oilTankersWharvesDone), self.maxNumOilTankersWharves)
-		
-		
-	def lastUpdateTimes(self):
-		"""
-		Updates a last time all the values, and calculates the means.
-		"""
-		self.updateTimes()
-		
-		self.meanNumOilTankersEntrance /= self.time
-		self.meanNumOilTankersInside /= self.time
-		self.meanTimeOilTankersUnloading /= self.time
-		self.meanNumOilTankersWharves /= self.time
-		self.meanTimeOilTankerInside /= self.time
-		self.meanTimeBeforeUnloading /= self.time
 		
 		
 	def printResults(self):
@@ -494,22 +494,8 @@ class Port:
 		"""
 		
 		self.printState()
-		print "--------------------------------------------"
-		print "Results of the simulation:"
-		print "Mean number of oil tankers waiting in the entrance: " + str(self.meanNumOilTankersEntrance)
-		print "Max number of oil tankers waiting in the entrance: " + str(self.maxNumOilTankersEntrance)
-		print "Mean number of oil tankers inside the port: " + str(self.meanNumOilTankersInside)
-		print "Max number of oil tankers inside the port: " + str(self.maxNumOilTankersInside)
-		print "Mean time spent by the tankers inside the port: " + str(self.meanTimeOilTankerInside)
-		print "Max time spent by the tankers inside the port: " + str(self.maxTimeOilTankerInside)
-		print "Mean time before unloading: " + str(self.meanTimeBeforeUnloading)
-		print "Max time before unloading: " + str(self.maxTimeBeforeUnloading)
-		print "Mean time spent by the tankers unloading at the wharves: " + str(self.meanTimeOilTankersUnloading)
-		print "Max time spent by the tankers unloading at the wharves: " + str(self.maxTimeOilTankersUnloading)
-		print "Mean number of tankers at the wharves: " + str(self.meanNumOilTankersWharves)
-		print "Max number of tankers at the wharves: " + str(self.maxNumOilTankersWharves)
-		print "Number of times the port was blocked: " + str(self.numTimesBlocked)
-		print "--------------------------------------------"
+		self.printResultsOnTheFly()
+
 		
 	def printResultsOnTheFly(self):
 		"""
@@ -517,31 +503,44 @@ class Port:
 		"""
 		print "--------------------------------------------"
 		print "Results of the simulation:"
-		print "Mean number of oil tankers waiting in the entrance: " + str(self.meanNumOilTankersEntrance/self.time)
-		print "Max number of oil tankers waiting in the entrance: " + str(self.maxNumOilTankersEntrance)
-		print "Mean number of oil tankers inside the port: " + str(self.meanNumOilTankersInside/self.time)
-		print "Max number of oil tankers inside the port: " + str(self.maxNumOilTankersInside)
-		print "Mean time spent by the tankers inside the port: " + str(self.meanTimeOilTankerInside/self.time)
-		print "Max time spent by the tankers inside the port: " + str(self.maxTimeOilTankerInside)
-		print "Mean time before unloading: " + str(self.meanTimeBeforeUnloading/self.time)
-		print "Max time before unloading: " + str(self.maxTimeBeforeUnloading)
-		print "Mean time spent by the tankers unloading at the wharves: " + str(self.meanTimeOilTankersUnloading/self.time)
-		print "Max time spent by the tankers unloading at the wharves: " + str(self.maxTimeOilTankersUnloading)
-		print "Mean number of tankers at the wharves: " + str(self.meanNumOilTankersWharves/self.time)
-		print "Max number of tankers at the wharves: " + str(self.maxNumOilTankersWharves)
-		print "Number of times the port was blocked: " + str(self.numTimesBlocked)
+		print "Mean number of oil tankers waiting in the entrance: " + str(self.meanNumOilTankersEntrance/self.time) + " units."
+		print "Max number of oil tankers waiting in the entrance: " + str(self.maxNumOilTankersEntrance) + " units."
+		print "Mean number of oil tankers inside the port: " + str(self.meanNumOilTankersInside/self.time) + " units."
+		print "Max number of oil tankers inside the port: " + str(self.maxNumOilTankersInside) + " unit."
+		print "Mean time spent by the tankers inside the port: " + mtt(self.meanTimeOilTankerInside/self.tankerCountDone)
+		print "Max time spent by the tankers inside the port: " + mtt(self.maxTimeOilTankerInside)
+		print "Mean time before unloading: " + mtt(self.meanTimeBeforeUnloading/self.time)
+		print "Max time before unloading: " + mtt(self.maxTimeBeforeUnloading)
+		print "Mean time spent by the tankers unloading at the wharves: " + mtt(self.meanTimeOilTankersUnloading/self.tankersCountUnloaded)
+		print "Max time spent by the tankers unloading at the wharves: " + mtt(self.maxTimeOilTankersUnloading)
+		print "Mean number of tankers at the wharves: " + str(self.meanNumOilTankersWharves/self.time) + " units."
+		print "Max number of tankers at the wharves: " + str(self.maxNumOilTankersWharves) + " units."
+		print "Number of times the port was blocked: " + str(self.numTimesBlocked) + " times."
 		print "--------------------------------------------"
 		
 		
 	@staticmethod	
 	def printList(st, li):
+		"""
+		Convenience method. Prints the string "st" and then the list.
+		
+		Arguments:
+			st 			A prefix string.
+			li 			The list to print. 
+		"""
 		s = st + "["
 		for i in li:
 			s += str(i) + ", "
 		s += "], size: " + str(len(li))
 		print s
 		
+		
 	def printState(self):
+		"""
+		Debug method.
+		Prints the current state of the instance: lists, current time, number of 
+		tankers, state of listEvents.
+		"""
 		print "/\\_/\\_/\\_/\\_/\\_/\\_/\\_/\\_/\\_/\\_/\\_/\\_"
 		print "Current state:"
 		print "Time: " + minutesToTime(self.time) + " (" + str(self.time) + ")"
@@ -554,13 +553,26 @@ class Port:
 		print "All lists: "
 		print self.printAllLists()
 		
+		
 	def printAllLists(self):
+		"""
+		Debug method.
+		Prints the content of the lists that this instance uses: oilTankersEntrance,
+		oilTankersWharves and oilTankersWharvesDone.
+		"""
 		Port.printList("otEntrance: ", self.oilTankersEntrance)	
 		Port.printList("otWharves: ", self.oilTankersWharves)	
 		Port.printList("otWDone: ", self.oilTankersWharvesDone)	
 		
 		
 	def detectBlockedSituation(self):
+		"""
+		Debug method. 
+		Used to detect when the port is in a blocked state: all tugs are carrying
+		an oil tanker, and all wharves are full. Oil tankers at the wharves that 
+		are done unloading need a tug to leave, and all tugs are carrying oil 
+		tankers from the entrance. 
+		"""
 		blocked = (self.freeTugs == 0 and self.listEvents.getListEventSize("ArrivalTugWharf") == 0)
 		blocked = blocked and (len(self.oilTankersWharves) + len(self.oilTankersWharvesDone) >= self.maxWharves)
 		blocked = blocked and (self.listEvents.getListEventSize("TugAvailable") == 0)

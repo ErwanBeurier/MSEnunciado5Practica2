@@ -64,6 +64,7 @@ class OilTanker:
 		self.arrivalTime = t
 		self.entranceTime = t
 		self.lastTimeTookCare = t
+		self.lastInterval = 0
 		self.totalTime = 0.0
 		self.listTimes = [0.0]
 		
@@ -109,6 +110,8 @@ class OilTanker:
 		self.listTimes.append(t1)
 		self.totalTime += t1
 		self.lastTimeTookCare += t1
+		self.lastInterval = t1 	
+	
 	
 	def getTotalTime(self):
 		"""
@@ -116,20 +119,26 @@ class OilTanker:
 		"""
 		return self.totalTime
 		
+		
 	def getLastTimeTookCare(self):
 		"""
 		Accessor method.
 		"""
 		return self.lastTimeTookCare
 		
+	
+	def getLastInterval(self):
+		"""
+		Accessor method.
+		"""
+		return self.lastInterval
+		
 	def getEntranceTime(self):
 		"""
 		Accessor method.
 		"""
 		return self.arrivalTime + self.listTimes[1]
-		
-		
-		
+
 		
 		
 		
