@@ -15,7 +15,7 @@
 		simulate()
 		printResults()
 	(The rest is supposed to be private, even if Python doesn't know about 
-	encapsulation)
+	encapsulation).
 	
 	This file is not supposed to be launched via console.
 	
@@ -25,10 +25,6 @@
 		oil tanker	= petrolero
 		wharf 		= muelle
 	
-	
-TODO:
-	routineArrivalOilTankerWharf : risk of blocked situation.
-	add the attributes that enable to answer the questions LOL
 ============================================================================"""
 
 
@@ -41,9 +37,9 @@ import ListEvents
 import OilTanker
 
 
-ISDEBUG = True 
+ISDEBUG = False 
 SAFEPORT = False
-LOGPORT = True
+LOGPORT = False
 
 def mtt(minutes):
 	return minutesToTime(minutes)
@@ -122,6 +118,14 @@ class Port:
 		maxNumOilTankersWharves 	Max number of oil tankers at the wharves. 
 									Updates at every iteration of simulate().
 		tankersCountUnloaded		Number of tankers that have unloaded.
+		numTimesBlocked				Number of times the port gets blocked (that 
+									is, a situation when no tug is avaiblable to 
+									free the wharves while the wharves are full).
+		meanTimeBeforeUnloading		Mean time spent by the oil tankers between 
+									the entrance and the arrival at the wharves.
+		maxTimeBeforeUnloading		Max time spent by the oil tankers between 
+									the entrance and the arrival at the wharves.
+
 	"""
 	def __init__(self, maxWharves, maxTugs, timeSimulation, muEmpty = 2, sigEmpty = 1, muFull = 10, sigFull = 3):
 		"""
@@ -180,7 +184,6 @@ class Port:
 		self.debugDebug("End of initialization.")
 	
 	
-	
 	def simulate(self):
 		"""
 		Launches the simulation. It generates a first oil tanker then launches 
@@ -226,7 +229,7 @@ class Port:
 			
 			if LOGPORT and not stopThat:
 				self.printState()
-				stopThat = (raw_input() != "")
+				stopThat = (raw_input("Press a key + Enter to prevent this interruption from happening again, of simply Enter if you want this to appear next time too:") != "")
 			if self.detectBlockedSituation():
 				self.numTimesBlocked += 1
 		
@@ -245,29 +248,6 @@ class Port:
 		#self.oilTankersEntrance.append(OilTanker(t, self.tankerCountTotalGenerated))
 		ot = OilTanker.OilTanker(self.time + t, self.tankerCountTotalGenerated)
 		self.listEvents.addEvent("ArrivalOilTankerEntrance", self.time + t, ot)
-	
-	
-	
-	def lambdat(self):
-		"""
-		Generates the lambda depending on the time "self.time".
-		"""
-		t = (self.time / 60.0) % 24.0
-		lt = 0
-		if 0.0 <= t and t < 5.0:
-			lt = 2.0*t/5.0 + 5.0
-		elif 5.0 <= t and t < 9.0:
-			lt = -1.0*t/4.0 + 33.0/4
-		elif 9.0 <= t and t < 15.0:
-			lt = 1.0*t/2.0 + 3.0/2.0
-		elif 15.0 <= t and t < 17.0:
-			lt = -3.0*t/2.0 + 63.0/2.0
-		else:
-			lt = -1.0*t/7.0 + 59.0/7.0
-		self.debugDebug(str(t) + " + lambda: " + str(lt))
-
-		return lt
-	
 	
 	
 	def routineArrivalOilTankerEntrance(self, oilTanker):
@@ -341,9 +321,7 @@ class Port:
 			self.printState()
 			self.printResultsOnTheFly()
 			raw_input()
-	
 
-	
 	
 	def routineUnloadingDone(self, oilTanker):
 		"""
@@ -365,7 +343,6 @@ class Port:
 			self.freeTugs -= 1
 			t = random.normalvariate(self.muEmpty, self.sigEmpty)
 			self.listEvents.addEvent("ArrivalTugWharf", self.time + t)
-
 			
 			
 	def routineArrivalTugWharf(self):
@@ -379,7 +356,6 @@ class Port:
 		ot = self.oilTankersWharvesDone.pop(0) 
 		self.listEvents.addEvent("ExitOilTanker", self.time + t, ot)
 		
-	
 	
 	def routineExitOilTanker(self, oilTanker):
 		"""
@@ -400,6 +376,7 @@ class Port:
 			print "Pause: " + str(len(oilTanker.listTimes))
 			print "Pause: " + str(oilTanker)
 			raw_input()
+	
 	
 	def routineTugAvailable(self):
 		"""
@@ -422,6 +399,7 @@ class Port:
 			self.listEvents.addEvent("ArrivalTugWharf", self.time + t)
 		elif self.freeTugs < self.maxTugs: # Should not occur, but well...
 			self.freeTugs += 1
+		
 		
 	def routineTugAvailableSafe(self):
 		"""
@@ -447,18 +425,33 @@ class Port:
 		
 		
 		
-	def debugDebug(self, s):
-		"""
-		A classical debug/pause method.
 		
-		Arguments:
-			s 			The text to print before the pause.
+	"""========================================================================
+	Below these two lines are functions that are not crucial to the 
+	understanding of the code.
+	========================================================================"""
+
+	def lambdat(self):
 		"""
-		if ISDEBUG:
-			print s
-			raw_input()
-	
-	
+		Generates the lambda depending on the time "self.time".
+		"""
+		t = (self.time / 60.0) % 24.0
+		lt = 0
+		if 0.0 <= t and t < 5.0:
+			lt = 2.0*t/5.0 + 5.0
+		elif 5.0 <= t and t < 9.0:
+			lt = -1.0*t/4.0 + 33.0/4
+		elif 9.0 <= t and t < 15.0:
+			lt = 1.0*t/2.0 + 3.0/2.0
+		elif 15.0 <= t and t < 17.0:
+			lt = -3.0*t/2.0 + 63.0/2.0
+		else:
+			lt = -1.0*t/7.0 + 59.0/7.0
+		self.debugDebug(str(t) + " + lambda: " + str(lt))
+
+		return lt
+		
+		
 	def getNumOilTankersInside(self):
 		"""
 		Returns the number of oil tankers inside the port.
@@ -579,6 +572,18 @@ class Port:
 		blocked = blocked and (self.listEvents.getListEventSize("ExitOilTanker") == 0)
 		return blocked
 		
+		
+	def debugDebug(self, s):
+		"""
+		A classical debug/pause method.
+		
+		Arguments:
+			s 			The text to print before the pause.
+		"""
+		if ISDEBUG:
+			print s
+			raw_input()
+	
 		
 		
 		

@@ -20,12 +20,9 @@
 	
 	This file is not supposed to be launched via console.
 	
-	
 	Vocabulary (because the code is in English but the wording is in Spanish):
 		oil tanker	= petrolero
 	
-	
-TODO:
 
 ============================================================================"""
 
@@ -68,6 +65,36 @@ class OilTanker:
 		self.totalTime = 0.0
 		self.listTimes = [0.0]
 		
+		
+	def addTime(self, t, interval = True):
+		"""
+		Registers a new time in the instance. 
+		
+		Arguments:
+			t 			Interval of time between the last event and the recorded 
+						event (if "interval" is True) OR timestamp of last event 
+						occuring to this boat.
+			interval 	Defines the sense of the argument "t" : interval of time 
+						or timestamp.
+		"""
+		t1 = t
+		
+		if not interval:
+			t1 = t - self.lastTimeTookCare
+			
+		self.listTimes.append(t1)
+		self.totalTime += t1
+		self.lastTimeTookCare += t1
+		self.lastInterval = t1 	
+	
+	
+	
+	
+	"""========================================================================
+	Below these two lines are functions that are not crucial to the 
+	understanding of the code.
+	========================================================================"""
+
 	def __hash__(self):
 		"""
 		To make the oil tanker hashable. Simply returns its id. 
@@ -91,27 +118,6 @@ class OilTanker:
 		#return "Oil Tanker num " + str(self.id) + " arrived at " + str(self.arrivalTime)
 		return "OT" + "0"*(4- int(log(self.id, 10))) + str(self.id)
 		
-	def addTime(self, t, interval = True):
-		"""
-		Registers a new time in the instance. 
-		
-		Arguments:
-			t 			Interval of time between the last event and the recorded 
-						event (if "interval" is True) OR timestamp of last event 
-						occuring to this boat.
-			interval 	Defines the sense of the argument "t" : interval of time 
-						or timestamp.
-		"""
-		t1 = t
-		
-		if not interval:
-			t1 = t - self.lastTimeTookCare
-			
-		self.listTimes.append(t1)
-		self.totalTime += t1
-		self.lastTimeTookCare += t1
-		self.lastInterval = t1 	
-	
 	
 	def getTotalTime(self):
 		"""
